@@ -30,6 +30,8 @@ public class BufferPool {
     private static final int DEFAULT_PAGE_SIZE = 4096;
 
     private static int pageSize = DEFAULT_PAGE_SIZE;
+    public Page[] pages;
+    public int pagecount;
 
     /**
      * Default number of pages passed to the constructor. This is used by
@@ -37,6 +39,7 @@ public class BufferPool {
      * constructor instead.
      */
     public static final int DEFAULT_PAGES = 50;
+    public int maxpages;
 
     /**
      * Creates a BufferPool that caches up to numPages pages.
@@ -45,6 +48,9 @@ public class BufferPool {
      */
     public BufferPool(int numPages) {
         // TODO: some code goes here
+	pages = new Page[numPages];
+	pagecount = -1;
+	maxpages = numPages;
     }
 
     public static int getPageSize() {
@@ -78,8 +84,26 @@ public class BufferPool {
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException, DbException {
-        // TODO: some code goes here
-        return null;
+	    for (int i = 0; i <= pagecount; ++i)
+	    {
+		   Page page = pages[i];
+		   if (pid.equals(page.getId()))
+		   {
+
+			   return page;
+		   }
+
+	    }
+	    pagecount++;
+	    if (pagecount >= maxpages)
+	    {
+		    //pagecount = maxpages - 1;
+		    throw new TransactionAbortedException();
+	    }
+		DbFile file = Database.getCatalog().getDatabaseFile(pid.getTableId());
+		Page page = file.readPage(pid);
+		pages[pagecount] = page;
+		return page;
     }
 
     /**

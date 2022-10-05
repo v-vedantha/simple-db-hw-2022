@@ -75,8 +75,10 @@ public class HeapPage implements Page {
      * @return the number of tuples on this page
      */
     private int getNumTuples() {
-        // TODO: some code goes here
-        return 0;
+	   int pagesize = BufferPool.getPageSize();
+	   int tuplesize = Database.getCatalog().getTupleDesc(pid.getTableId()).getSize();
+	  return  (int)Math.floor((pagesize * 8.0) / (tuplesize * 8 + 1));
+
 
     }
 
@@ -88,7 +90,7 @@ public class HeapPage implements Page {
     private int getHeaderSize() {
 
         // TODO: some code goes here
-        return 0;
+        return (int) Math.ceil(this.getNumTuples()/8.0);
 
     }
 
@@ -121,8 +123,7 @@ public class HeapPage implements Page {
      * @return the PageId associated with this page.
      */
     public HeapPageId getId() {
-        // TODO: some code goes here
-        throw new UnsupportedOperationException("implement this");
+	    return pid;
     }
 
     /**
@@ -294,7 +295,16 @@ public class HeapPage implements Page {
      */
     public int getNumUnusedSlots() {
         // TODO: some code goes here
-        return 0;
+	int unused = 0;
+	for (int i = 0 ; i < this.getNumTuples(); ++i)
+	{
+		if (!isSlotUsed(i))
+		{
+			unused++;
+		}
+
+	}
+        return unused;
     }
 
     /**
@@ -302,7 +312,9 @@ public class HeapPage implements Page {
      */
     public boolean isSlotUsed(int i) {
         // TODO: some code goes here
-        return false;
+        int index = i / 8;
+	int offset = i % 8;
+	return (header[index] >> (offset) & 1) == 1;
     }
 
     /**
@@ -319,7 +331,36 @@ public class HeapPage implements Page {
      */
     public Iterator<Tuple> iterator() {
         // TODO: some code goes here
-        return null;
+	return new Iterator<Tuple>() {
+            private int i = 0;
+
+            @Override
+            public boolean hasNext() {
+		    int j = i;
+		while (j < HeapPage.this.getNumTuples() && !isSlotUsed(j))
+		{
+			++j;
+		}
+		if (j >= HeapPage.this.getNumTuples())
+		{
+			return false;
+		}
+		return true;
+            }
+
+            @Override
+            public Tuple next() {
+		if (!hasNext()) throw new NoSuchElementException();
+
+		while (i < HeapPage.this.getNumTuples() && !isSlotUsed(i))
+		{
+			++i;
+		}
+
+		return tuples[i++];
+
+            }
+        };	    
     }
 
 }

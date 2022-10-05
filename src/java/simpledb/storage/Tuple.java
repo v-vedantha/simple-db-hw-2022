@@ -1,5 +1,6 @@
 package simpledb.storage;
 
+import java.util.ArrayList;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -12,6 +13,9 @@ import java.util.Iterator;
 public class Tuple implements Serializable {
 
     private static final long serialVersionUID = 1L;
+    public RecordId rid;
+    public TupleDesc td;
+    public Field[] fields;
 
     /**
      * Create a new tuple with the specified schema (type).
@@ -21,6 +25,9 @@ public class Tuple implements Serializable {
      */
     public Tuple(TupleDesc td) {
         // TODO: some code goes here
+	this.td = td;
+	fields = new Field[td.numFields()];
+
     }
 
     /**
@@ -28,7 +35,7 @@ public class Tuple implements Serializable {
      */
     public TupleDesc getTupleDesc() {
         // TODO: some code goes here
-        return null;
+	return td;
     }
 
     /**
@@ -37,7 +44,7 @@ public class Tuple implements Serializable {
      */
     public RecordId getRecordId() {
         // TODO: some code goes here
-        return null;
+	return rid;
     }
 
     /**
@@ -47,6 +54,7 @@ public class Tuple implements Serializable {
      */
     public void setRecordId(RecordId rid) {
         // TODO: some code goes here
+	this.rid = rid;
     }
 
     /**
@@ -57,6 +65,8 @@ public class Tuple implements Serializable {
      */
     public void setField(int i, Field f) {
         // TODO: some code goes here
+	fields[i] = f;
+	
     }
 
     /**
@@ -65,7 +75,8 @@ public class Tuple implements Serializable {
      */
     public Field getField(int i) {
         // TODO: some code goes here
-        return null;
+	return fields[i];
+	
     }
 
     /**
@@ -86,13 +97,13 @@ public class Tuple implements Serializable {
      */
     public Iterator<Field> fields() {
         // TODO: some code goes here
-        return null;
+        return Arrays.stream(fields).iterator();
     }
 
     /**
      * reset the TupleDesc of this tuple (only affecting the TupleDesc)
      */
     public void resetTupleDesc(TupleDesc td) {
-        // TODO: some code goes here
+	    this.td =td;
     }
 }
