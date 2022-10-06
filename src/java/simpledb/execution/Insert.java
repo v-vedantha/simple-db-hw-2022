@@ -7,6 +7,8 @@ import simpledb.storage.Tuple;
 import simpledb.storage.TupleDesc;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
+import simpledb.storage.*;
+import simpledb.common.Type;
 
 /**
  * Inserts tuples read from the child operator into the tableId specified in the
@@ -25,26 +27,39 @@ public class Insert extends Operator {
      * @throws DbException if TupleDesc of child differs from table into which we are to
      *                     insert.
      */
+    private TransactionId t;
+    private OpIterator child;
+    private int tableId;
+    private boolean called;
     public Insert(TransactionId t, OpIterator child, int tableId)
             throws DbException {
         // TODO: some code goes here
+        this.t=t;
+        this.child=child;
+        this.tableId=tableId;
+        called = false;
     }
 
     public TupleDesc getTupleDesc() {
         // TODO: some code goes here
-        return null;
+        return new TupleDesc(new Type[]{Type.INT_TYPE});
     }
 
     public void open() throws DbException, TransactionAbortedException {
+        super.open();
+        child.open();
         // TODO: some code goes here
     }
 
     public void close() {
+        super.close();
+        child.close();
         // TODO: some code goes here
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
         // TODO: some code goes here
+        child.rewind();
     }
 
     /**
@@ -62,17 +77,38 @@ public class Insert extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // TODO: some code goes here
-        return null;
+        if (called)
+        {
+            return null;
+        }
+        called = true;
+        int tot = 0;
+        while(child.hasNext())
+        {
+            tot++;
+            Tuple tup = child.next();
+            try{
+            Database.getBufferPool().insertTuple(t, tableId, tup);
+            }
+            catch (Exception e)
+            {
+
+            }
+        }
+        TupleDesc td = new TupleDesc(new Type[]{Type.INT_TYPE});
+        Tuple nt = new Tuple(td);
+        nt.setField(0, new IntField(tot));
+        return nt;
     }
 
     @Override
     public OpIterator[] getChildren() {
         // TODO: some code goes here
-        return null;
+        return new OpIterator[]{this.child};
     }
 
     @Override
     public void setChildren(OpIterator[] children) {
-        // TODO: some code goes here
+        this.child = children[0];
     }
 }

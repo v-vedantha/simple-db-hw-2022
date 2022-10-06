@@ -31,7 +31,7 @@ public class BufferPool {
 
     private static int pageSize = DEFAULT_PAGE_SIZE;
     public Page[] pages;
-    public int pagecount;
+    public boolean[] occupied;
 
     /**
      * Default number of pages passed to the constructor. This is used by
@@ -49,7 +49,7 @@ public class BufferPool {
     public BufferPool(int numPages) {
         // TODO: some code goes here
 	pages = new Page[numPages];
-	pagecount = -1;
+	occupied = new boolean[numPages];
 	maxpages = numPages;
     }
 
@@ -84,8 +84,12 @@ public class BufferPool {
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException, DbException {
-	    for (int i = 0; i <= pagecount; ++i)
+	    for (int i = 0; i < pages.length; ++i)
 	    {
+            if (!occupied[i])
+            {
+                continue;
+            }
 		   Page page = pages[i];
 		   if (pid.equals(page.getId()))
 		   {
@@ -94,22 +98,28 @@ public class BufferPool {
 		   }
 
 	    }
-	    pagecount++;
-	    if (pagecount >= maxpages)
+	    for (int i = 0; i < pages.length; ++i)
 	    {
-		    //pagecount = maxpages - 1;
-		    throw new TransactionAbortedException();
+            if (occupied[i])
+            {
+                continue;
+            }
+            occupied[i] =true;
+            DbFile file = Database.getCatalog().getDatabaseFile(pid.getTableId());
+            Page page = file.readPage(pid);
+            pages[i] = page;
+            return page;
+
 	    }
-		DbFile file = Database.getCatalog().getDatabaseFile(pid.getTableId());
-		Page page = file.readPage(pid);
-		pages[pagecount] = page;
-		return page;
+        throw new TransactionAbortedException();
     }
 
     private void cachePage(Page cachepage, PageId pid)
             throws TransactionAbortedException, DbException {
-	    for (int i = 0; i <= pagecount; ++i)
+	    for (int i = 0; i < pages.length; ++i)
 	    {
+           if (!occupied[i])
+                {continue;}
 		   Page page = pages[i];
 		   if (page.getId().equals(pid))
 		   {
@@ -118,13 +128,16 @@ public class BufferPool {
 		   }
 
 	    }
-	    pagecount++;
-	    if (pagecount >= maxpages)
+	    for (int i = 0; i < pages.length; ++i)
 	    {
-		    //pagecount = maxpages - 1;
-		    throw new TransactionAbortedException();
+            if (occupied[i])
+            {
+                continue;
+            }
+            occupied[i] =true;
+            pages[i] = cachepage;
+            return;
 	    }
-		pages[pagecount] = cachepage;
 		return ;
     }
     /**
@@ -253,6 +266,15 @@ public class BufferPool {
     public synchronized void removePage(PageId pid) {
         // TODO: some code goes here
         // not necessary for lab1
+	    for (int i = 0; i < pages.length; ++i)
+	    {
+		   Page page = pages[i];
+		   if (pid.equals(page.getId()))
+		   {
+                occupied[i] =false;
+		   }
+
+	    }
     }
 
     /**
@@ -263,6 +285,15 @@ public class BufferPool {
     private synchronized void flushPage(PageId pid) throws IOException {
         // TODO: some code goes here
         // not necessary for lab1
+	    for (int i = 0; i < pages.length; ++i)
+	    {
+		   Page page = pages[i];
+		   if (pid.equals(page.getId()))
+		   {
+                DbFile file = Database.getCatalog().getDatabaseFile(pid.getTableId());
+                file.writePage(page);
+		   }
+	    }
     }
 
     /**
@@ -271,6 +302,16 @@ public class BufferPool {
     public synchronized void flushPages(TransactionId tid) throws IOException {
         // TODO: some code goes here
         // not necessary for lab1|lab2
+	    for (int i = 0; i < pages.length; ++i)
+	    {
+		   Page page = pages[i];
+		   if (tid.equals(page.isDirty()))
+		   {
+                PageId pid = page.getId();
+                DbFile file = Database.getCatalog().getDatabaseFile(pid.getTableId());
+                file.writePage(page);
+		   }
+	    }
     }
 
     /**
@@ -280,6 +321,21 @@ public class BufferPool {
     private synchronized void evictPage() throws DbException {
         // TODO: some code goes here
         // not necessary for lab1
+
+	    for (int i = 0; i < pages.length; ++i)
+	    {
+            if (!occupied[i])
+                continue;
+            Page page = pages[i];
+            try{
+            flushPage(page.getId());
+            removePage(page.getId());
+            }
+            catch (Exception e)
+            {
+                
+            }
+	    }
     }
 
 }
