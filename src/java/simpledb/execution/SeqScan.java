@@ -140,12 +140,14 @@ public class SeqScan implements OpIterator {
     }
 
     public void close() {
-	    this.it.close();
+	    if (this.it != null)
+	    {this.it.close();}
 	    this.it=null;
     }
 
     public void rewind() throws DbException, NoSuchElementException,
             TransactionAbortedException {
+		    this.close();
 		    this.open();
     }
 }

@@ -2,6 +2,7 @@ package simpledb.execution;
 
 import simpledb.storage.Tuple;
 import simpledb.storage.TupleIterator;
+import simpledb.storage.*;
 
 import java.io.Serializable;
 
@@ -77,6 +78,7 @@ public interface Aggregator extends Serializable {
      * @param tup the Tuple containing an aggregate field and a group-by field
      */
     void mergeTupleIntoGroup(Tuple tup);
+    TupleDesc getTupleDesc();
 
     /**
      * Create a OpIterator over group aggregate results.
