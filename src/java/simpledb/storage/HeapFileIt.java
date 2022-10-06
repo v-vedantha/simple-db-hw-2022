@@ -29,15 +29,13 @@ public class HeapFileIt extends AbstractDbFileIterator {
 	    private int numPages;
 	    private int tableid;
 	    private boolean open = false;
-	    private BufferPool bp;
 
-	    public HeapFileIt(TransactionId tid, int numPages, int t, BufferPool bp)
+	    public HeapFileIt(TransactionId tid, int numPages, int t)
 	    {
 		    this.tid = tid;
 		    this.numPages = numPages;
 		    this.it = null;
 		    tableid = t;
-		    this.bp = bp;
 	    }
 	    public void open()
 	    {
@@ -67,10 +65,9 @@ public class HeapFileIt extends AbstractDbFileIterator {
 				i++;
 				HeapPageId id = new HeapPageId(tableid, i);
 				try{
-				it = ( (HeapPage)bp.getPage(tid, id, Permissions.READ_ONLY)).iterator();
+					it = ( (HeapPage)Database.getBufferPool().getPage(tid, id, Permissions.READ_ONLY)).iterator();
 				} 
 				catch (Exception e) {
-				
 				}
 				if (it == null) continue;
 

@@ -106,6 +106,27 @@ public class BufferPool {
 		return page;
     }
 
+    private void cachePage(Page cachepage, PageId pid)
+            throws TransactionAbortedException, DbException {
+	    for (int i = 0; i <= pagecount; ++i)
+	    {
+		   Page page = pages[i];
+		   if (page.getId().equals(pid))
+		   {
+                pages[i] = cachepage;
+                return ;
+		   }
+
+	    }
+	    pagecount++;
+	    if (pagecount >= maxpages)
+	    {
+		    //pagecount = maxpages - 1;
+		    throw new TransactionAbortedException();
+	    }
+		pages[pagecount] = cachepage;
+		return ;
+    }
     /**
      * Releases the lock on a page.
      * Calling this is very risky, and may result in wrong behavior. Think hard
@@ -170,6 +191,15 @@ public class BufferPool {
             throws DbException, IOException, TransactionAbortedException {
         // TODO: some code goes here
         // not necessary for lab1
+
+        HeapFile hf = (HeapFile) Database.getCatalog().getDatabaseFile(tableId);
+        List<Page> q = hf.insertTuple(tid, t);
+        for (Page p : q)
+        {
+            HeapPage page = ((HeapPage)p);
+            ((HeapPage)p).markDirty(true, tid);
+            cachePage(page, ((HeapPage)p).getId());
+        }
     }
 
     /**
@@ -189,6 +219,15 @@ public class BufferPool {
             throws DbException, IOException, TransactionAbortedException {
         // TODO: some code goes here
         // not necessary for lab1
+        HeapFile hf = (HeapFile) Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
+        List<Page> q = hf.deleteTuple(tid, t);
+        for (Page p : q)
+        {
+            HeapPage page = ((HeapPage)p);
+            ((HeapPage)p).markDirty(true, tid);
+
+            cachePage(page, ((HeapPage)p).getId());
+        }
     }
 
     /**

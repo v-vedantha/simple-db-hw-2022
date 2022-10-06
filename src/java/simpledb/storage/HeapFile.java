@@ -11,6 +11,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.*;
 
 /**
  * HeapFile is an implementation of a DbFile that stores a collection of tuples
@@ -33,18 +34,16 @@ public class HeapFile implements DbFile {
 	public File f;
 	public TupleDesc td;
 	public RandomAccessFile rf;
-	public BufferPool bp;
     public HeapFile(File f, TupleDesc td) {
         // TODO: some code goes here
-	this.f = f;
-	this.td = td;
-	try{
-	this.rf = new RandomAccessFile(f, "r");
-	}
-	catch (Exception e)
-	{
-	}
-	bp = new BufferPool(100000);
+        this.f = f;
+        this.td = td;
+        try{
+            this.rf = new RandomAccessFile(f, "rw");
+        }
+        catch (Exception e)
+        {
+        }
     }
 
     /**
@@ -103,6 +102,17 @@ public class HeapFile implements DbFile {
     public void writePage(Page page) throws IOException {
         // TODO: some code goes here
         // not necessary for lab1
+	    byte[] b = ((HeapPage) page).getPageData();
+        PageId pid = ((HeapPage) page).getId();
+	    try{
+		    rf.seek((pid.getPageNumber()) * BufferPool.getPageSize());
+
+		    rf.write(b);
+	    }
+	    catch (Exception e)
+	    {
+	    }
+
     }
 
     /**
@@ -110,28 +120,59 @@ public class HeapFile implements DbFile {
      */
     public int numPages() {
         // TODO: some code goes here
-	return (int) Math.floor(((int)f.length()) / BufferPool.getPageSize());
+        return (int) Math.floor(((int)f.length()) / BufferPool.getPageSize());
     }
 
     // see DbFile.java for javadocs
     public List<Page> insertTuple(TransactionId tid, Tuple t)
             throws DbException, IOException, TransactionAbortedException {
         // TODO: some code goes here
-        return null;
         // not necessary for lab1
+        for (int i =0 ; i < numPages(); ++i)
+        {
+
+            HeapPage p = (HeapPage) Database.getBufferPool().getPage(tid,new HeapPageId(getId(), i), Permissions.READ_WRITE);	
+            try{
+                p.insertTuple(t);
+                return Arrays.asList(p);
+            }
+            catch(Exception e)
+            {
+
+            }
+        }
+        int numPages = numPages();
+        long currlen = rf.length();
+        rf.setLength(rf.length() + BufferPool.getPageSize());
+        rf.seek(currlen);
+        for (int i = 0; i < BufferPool.getPageSize() ;++i)
+        {
+            rf.writeByte(0);
+        }
+        HeapPage p = (HeapPage) Database.getBufferPool().getPage(tid,new HeapPageId(getId(), numPages), Permissions.READ_WRITE);	
+        p.insertTuple(t);
+        return Arrays.asList(p);
     }
 
     // see DbFile.java for javadocs
     public List<Page> deleteTuple(TransactionId tid, Tuple t) throws DbException,
             TransactionAbortedException {
         // TODO: some code goes here
-        return null;
         // not necessary for lab1
+        int pgno = t.getRecordId().getPageId().getPageNumber();
+        int tableid = t.getRecordId().getPageId().getTableId();
+        if (tableid != getId())
+        {
+            throw new DbException("wrong table");
+        }
+        HeapPage p =(HeapPage) Database.getBufferPool().getPage(tid,t.getRecordId().getPageId(), Permissions.READ_WRITE);	
+        p.deleteTuple(t);
+        return Arrays.asList(p);
     }
 
     // see DbFile.java for javadocs
     public DbFileIterator iterator(TransactionId tid) {
-	return new HeapFileIt(tid, this.numPages(), this.getId(), this.bp);
+        return new HeapFileIt(tid, this.numPages(), this.getId());
     }
 
 }
