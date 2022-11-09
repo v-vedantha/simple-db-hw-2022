@@ -23,8 +23,22 @@ public class IntHistogram {
      * @param min     The minimum integer value that will ever be passed to this class for histogramming
      * @param max     The maximum integer value that will ever be passed to this class for histogramming
      */
+    // Store the bucket number
+    private int buckets;
+    // Store the min value
+    private int min;
+    // Store the max value
+    private int max;
+    private int total;
+    // Store the bucket counts
+    private int[] bucketCounts;
     public IntHistogram(int buckets, int min, int max) {
-        // TODO: some code goes here
+        // some code goes here
+        this.buckets = buckets;
+        this.min = min;
+        this.max = max;
+        bucketCounts = new int[buckets];
+        total = 0;
     }
 
     /**
@@ -32,8 +46,19 @@ public class IntHistogram {
      *
      * @param v Value to add to the histogram
      */
+
+    private int getBucketIndex(int v) {
+        if (v == max) {
+            return buckets - 1;
+        }
+        int index =  (int) ((v - min)  / (max - min)) * buckets;
+        return index;
+    }
     public void addValue(int v) {
-        // TODO: some code goes here
+        // some code goes here
+        total++;
+        int bucketIndex = getBucketIndex(v);
+        bucketCounts[bucketIndex]++;
     }
 
     /**
@@ -46,10 +71,125 @@ public class IntHistogram {
      * @param v  Value
      * @return Predicted selectivity of this particular operator and value
      */
-    public double estimateSelectivity(Predicate.Op op, int v) {
+    public double estimateEqual(int v) {
+        // some code goes here
+        if (v < min || v > max) {
+            return 0.0;
+        }
+        int bucketIndex = getBucketIndex(v);
+        return (bucketCounts[bucketIndex] / ((double) (max - min) / buckets))/total;
+    }
 
-        // TODO: some code goes here
-        return -1.0;
+    public double estimateLessThan(int v)
+    {
+        // some code goes here
+        if (v <= min) {
+            return 0.0;
+        }
+        if (v > max) {
+            return 1.0;
+        }
+        int bucketIndex = getBucketIndex(v);
+        double fraction = (v - min) / (double) (max - min) * buckets - bucketIndex;
+        double lessThan = 0.0;
+        for (int i = 0; i < bucketIndex; i++) {
+            lessThan += bucketCounts[i];
+        }
+        lessThan += fraction * bucketCounts[bucketIndex];
+        return lessThan / total;
+    }
+
+    public double estimateLessThanEquals(int v)
+    {
+        // some code goes here
+        if (v < min) {
+            return 0.0;
+        }
+        if (v >= max) {
+            return 1.0;
+        }
+        int bucketIndex = getBucketIndex(v);
+        double fraction = (v - min) / (double) (max - min) * buckets - bucketIndex;
+        double lessThan = 0.0;
+        for (int i = 0; i < bucketIndex; i++) {
+            lessThan += bucketCounts[i];
+        }
+        lessThan += (fraction + 1) * bucketCounts[bucketIndex];
+        return lessThan / total;
+    }
+
+    public double estimateGreaterThan(int v)
+    {
+        // some code goes here
+        if (v < min) {
+            return 1.0;
+        }
+        if (v >= max) {
+            return 0.0;
+        }
+        int bucketIndex = getBucketIndex(v);
+        double fraction = (v - min) / (double) (max - min) * buckets - bucketIndex;
+        double greaterThan = 0.0;
+        for (int i = bucketIndex + 1; i < buckets; i++) {
+            greaterThan += bucketCounts[i];
+        }
+        greaterThan += (1 - fraction) * bucketCounts[bucketIndex];
+        return greaterThan / total;
+    }
+
+    public double estimateGreaterThanEquals(int v)
+    {
+        // some code goes here
+        if (v <= min) {
+            return 1.0;
+        }
+        if (v > max) {
+            return 0.0;
+        }
+        int bucketIndex = getBucketIndex(v);
+        double fraction = (v - min) / (double) (max - min) * buckets - bucketIndex;
+        double greaterThan = 0.0;
+        for (int i = bucketIndex + 1; i < buckets; i++) {
+            greaterThan += bucketCounts[i];
+        }
+        greaterThan += (1 - fraction + 1) * bucketCounts[bucketIndex];
+        return greaterThan / total;
+    }
+
+    public double estimateNotEquals(int v)
+    {
+        // some code goes here
+        if (v < min || v > max) {
+            return 1.0;
+        }
+        int bucketIndex = getBucketIndex(v);
+        return 1.0-((bucketCounts[bucketIndex] / ((double) (max - min) / buckets))/total);
+    }
+    public double estimateSelectivity(Predicate.Op op, int v) {
+        // some code goes here
+        double selectivity = 0;
+        switch (op) {
+            case EQUALS:
+                selectivity = estimateEqual(v);
+                break;
+            case NOT_EQUALS:
+                selectivity = estimateNotEquals(v);
+                break;
+            case GREATER_THAN:
+                selectivity = estimateGreaterThan(v);
+                break;
+            case GREATER_THAN_OR_EQ:
+                selectivity = estimateGreaterThanEquals(v);
+                break;
+            case LESS_THAN:
+                selectivity = estimateLessThan(v);
+                break;
+            case LESS_THAN_OR_EQ:
+                selectivity = estimateLessThanEquals(v);
+                break;
+        }
+        return selectivity;
+
     }
 
     /**

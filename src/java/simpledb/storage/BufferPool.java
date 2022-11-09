@@ -111,6 +111,20 @@ public class BufferPool {
             return page;
 
 	    }
+        evictPage(); 
+	    for (int i = 0; i < pages.length; ++i)
+	    {
+            if (occupied[i])
+            {
+                continue;
+            }
+            occupied[i] =true;
+            DbFile file = Database.getCatalog().getDatabaseFile(pid.getTableId());
+            Page page = file.readPage(pid);
+            pages[i] = page;
+            return page;
+
+	    }
         throw new TransactionAbortedException();
     }
 

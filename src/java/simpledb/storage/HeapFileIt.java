@@ -35,10 +35,12 @@ public class HeapFileIt extends AbstractDbFileIterator {
 		    this.tid = tid;
 		    this.numPages = numPages;
 		    this.it = null;
+			i = -1;
 		    tableid = t;
 	    }
 	    public void open()
 	    {
+			i = -1;
 		    open =true;
 	    }
 	    public void rewind()
@@ -52,37 +54,38 @@ public class HeapFileIt extends AbstractDbFileIterator {
 		    it = null;
 		    i=-1;
 		    open = false;
-		    
 		}
 
-	public Tuple readNext()
-	{
-		if (!open) return null;
-		if (it == null || it.hasNext() == false)
+		public Tuple readNext()
 		{
-			while ((1 + i) < numPages)
+			if (!open) return null;
+			if (it == null || it.hasNext() == false)
 			{
-				i++;
-				HeapPageId id = new HeapPageId(tableid, i);
-				try{
-					it = ( (HeapPage)Database.getBufferPool().getPage(tid, id, Permissions.READ_ONLY)).iterator();
-				} 
-				catch (Exception e) {
-				}
-				if (it == null) continue;
-
-				if (it.hasNext())
+				while ((1 + i) < numPages)
 				{
-					return it.next();
+					i++;
+					HeapPageId id = new HeapPageId(tableid, i);
+					try{
+						it = ( (HeapPage)Database.getBufferPool().getPage(tid, id, Permissions.READ_ONLY)).iterator();
+					} 
+					catch (Exception e) {
+					}
+					if (it == null){
+						 continue;
+					}
+
+					if (it.hasNext())
+					{
+						return it.next();
+					}
 				}
 			}
+			else if (it != null && it.hasNext())
+			{
+				return it.next();
+			}
+			return null;
 		}
-		else if (it.hasNext())
-		{
-			return it.next();
-		}
-		return null;
-	}
 }
 
 
