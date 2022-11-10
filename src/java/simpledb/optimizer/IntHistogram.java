@@ -34,10 +34,15 @@ public class IntHistogram {
     private int[] bucketCounts;
     public IntHistogram(int buckets, int min, int max) {
         // some code goes here
-        this.buckets = buckets;
+        if (buckets > max - min) {
+            this.buckets = max - min ;
+        }
+        else{
+            this.buckets = buckets;
+        }
         this.min = min;
         this.max = max;
-        bucketCounts = new int[buckets];
+        bucketCounts = new int[this.buckets];
         total = 0;
     }
 
@@ -51,7 +56,8 @@ public class IntHistogram {
         if (v == max) {
             return buckets - 1;
         }
-        int index =  (int) ((v - min)  / (max - min)) * buckets;
+        double width = (max - min) / buckets;
+        int index =  (int) ((v - min)  / width);
         return index;
     }
     public void addValue(int v) {
@@ -77,7 +83,9 @@ public class IntHistogram {
             return 0.0;
         }
         int bucketIndex = getBucketIndex(v);
-        return (bucketCounts[bucketIndex] / ((double) (max - min) / buckets))/total;
+        double width = (max - min) / (double) buckets;
+        double op =  (bucketCounts[bucketIndex] / width)/total;
+        return op;
     }
 
     public double estimateLessThan(int v)
