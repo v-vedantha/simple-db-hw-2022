@@ -30,20 +30,10 @@ public class Lock {
         return pid;
     }
 
-    public void setType(LockType type) {
-        this.type = type;
-    }
-
-    public void setTid(TransactionId tid) {
-        this.tid = tid;
-    }
 
     @Override
     public String toString() {
-        return "Lock{" +
-                "type=" + type +
-                ", tid=" + tid +
-                '}';
+        return "Lock thing";
     }
     
 }

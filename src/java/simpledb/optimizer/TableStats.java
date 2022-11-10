@@ -64,7 +64,7 @@ public class TableStats {
      * 100, though our tests assume that you have at least 100 bins in your
      * histograms.
      */
-    static final int NUM_HIST_BINS = 32;
+    static final int NUM_HIST_BINS = 100;
 
     /**
      * Create a new TableStats object, that keeps track of statistics on each
