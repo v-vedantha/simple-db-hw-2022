@@ -40,7 +40,7 @@ public class BufferPool {
      */
     public static final int DEFAULT_PAGES = 50;
     public int maxpages;
-
+    public LockManager lockManager;
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -51,6 +51,7 @@ public class BufferPool {
 	pages = new Page[numPages];
 	occupied = new boolean[numPages];
 	maxpages = numPages;
+    lockManager = new LockManager();
     }
 
     public static int getPageSize() {
@@ -84,6 +85,18 @@ public class BufferPool {
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException, DbException {
+        boolean lock_granted = false;
+        while (!lock_granted)
+        {
+            if(perm == Permissions.READ_ONLY)
+            {
+                lock_granted = lockManager.grantSharedLock(tid, pid);
+            }
+            else
+            {
+                lock_granted = lockManager.grantExclusiveLock(tid, pid);
+            }
+        }
 	    for (int i = 0; i < pages.length; ++i)
 	    {
             if (!occupied[i])
@@ -91,6 +104,12 @@ public class BufferPool {
                 continue;
             }
 		   Page page = pages[i];
+           if (page == null)
+           {
+            System.out.println("page is null");
+            System.out.println(i);
+            System.out.println(occupied[i]);
+           }
 		   if (pid.equals(page.getId()))
 		   {
 
@@ -104,10 +123,14 @@ public class BufferPool {
             {
                 continue;
             }
-            occupied[i] =true;
             DbFile file = Database.getCatalog().getDatabaseFile(pid.getTableId());
             Page page = file.readPage(pid);
+            if (page == null)
+            {
+                System.out.println("ballsack");
+            }
             pages[i] = page;
+            occupied[i] =true;
             return page;
 
 	    }
@@ -118,10 +141,14 @@ public class BufferPool {
             {
                 continue;
             }
-            occupied[i] =true;
             DbFile file = Database.getCatalog().getDatabaseFile(pid.getTableId());
             Page page = file.readPage(pid);
+            if (page == null)
+            {
+                System.out.println("ballsack");
+            }
             pages[i] = page;
+            occupied[i] =true;
             return page;
 
 	    }
@@ -148,8 +175,8 @@ public class BufferPool {
             {
                 continue;
             }
-            occupied[i] =true;
             pages[i] = cachepage;
+            occupied[i] =true;
             return;
 	    }
 		return ;
@@ -166,6 +193,7 @@ public class BufferPool {
     public void unsafeReleasePage(TransactionId tid, PageId pid) {
         // TODO: some code goes here
         // not necessary for lab1|lab2
+        lockManager.releaseLocks(tid, pid);
     }
 
     /**
@@ -176,7 +204,9 @@ public class BufferPool {
     public void transactionComplete(TransactionId tid) {
         // TODO: some code goes here
         // not necessary for lab1|lab2
+        transactionComplete(tid, true);
     }
+
 
     /**
      * Return true if the specified transaction has a lock on the specified page
@@ -184,7 +214,7 @@ public class BufferPool {
     public boolean holdsLock(TransactionId tid, PageId p) {
         // TODO: some code goes here
         // not necessary for lab1|lab2
-        return false;
+        return lockManager.holdsLock(tid, p);
     }
 
     /**
@@ -197,6 +227,28 @@ public class BufferPool {
     public void transactionComplete(TransactionId tid, boolean commit) {
         // TODO: some code goes here
         // not necessary for lab1|lab2
+        lockManager.releaseAllLocks(tid);
+        // Flush dirty pages
+        for (int i = 0; i < pages.length; ++i)
+        {
+            if (!occupied[i])
+            {
+                continue;
+            }
+            Page page = pages[i];
+            if (page.isDirty() == tid)
+            {
+                try{
+                    if (commit)
+                        flushPage(page.getId());
+                    else
+                        removePage(page.getId());
+                } catch (Exception e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     /**
@@ -282,6 +334,10 @@ public class BufferPool {
         // not necessary for lab1
 	    for (int i = 0; i < pages.length; ++i)
 	    {
+            if (!occupied[i])
+            {
+                continue;
+            }
 		   Page page = pages[i];
 		   if (pid.equals(page.getId()))
 		   {
@@ -301,6 +357,10 @@ public class BufferPool {
         // not necessary for lab1
 	    for (int i = 0; i < pages.length; ++i)
 	    {
+            if (!occupied[i])
+            {
+                continue;
+            }
 		   Page page = pages[i];
 		   if (pid.equals(page.getId()))
 		   {
@@ -341,15 +401,22 @@ public class BufferPool {
             if (!occupied[i])
                 continue;
             Page page = pages[i];
+            if (page.isDirty() != null)
+            {
+                continue;
+            }
             try{
-            flushPage(page.getId());
-            removePage(page.getId());
+                flushPage(page.getId());
+                removePage(page.getId());
+                return;
             }
             catch (Exception e)
             {
+                System.out.println(e);
                 
             }
 	    }
+        throw new DbException("no page to evict");
     }
 
 }
