@@ -48,10 +48,11 @@ public class BufferPool {
      */
     public BufferPool(int numPages) {
         // TODO: some code goes here
-	pages = new Page[numPages];
-	occupied = new boolean[numPages];
-	maxpages = numPages;
-    lockManager = new LockManager();
+        System.out.println("BufferPool constructor");
+        pages = new Page[numPages];
+        occupied = new boolean[numPages];
+        maxpages = numPages;
+        lockManager = new LockManager();
     }
 
     public static int getPageSize() {
@@ -227,7 +228,6 @@ public class BufferPool {
     public void transactionComplete(TransactionId tid, boolean commit) {
         // TODO: some code goes here
         // not necessary for lab1|lab2
-        lockManager.releaseAllLocks(tid);
         // Flush dirty pages
         for (int i = 0; i < pages.length; ++i)
         {
@@ -240,7 +240,10 @@ public class BufferPool {
             {
                 try{
                     if (commit)
+                    {
                         flushPage(page.getId());
+                    }
+                        
                     else
                         removePage(page.getId());
                 } catch (Exception e)
@@ -249,6 +252,7 @@ public class BufferPool {
                 }
             }
         }
+        lockManager.releaseAllLocks(tid);
     }
 
     /**
@@ -270,7 +274,6 @@ public class BufferPool {
             throws DbException, IOException, TransactionAbortedException {
         // TODO: some code goes here
         // not necessary for lab1
-
         HeapFile hf = (HeapFile) Database.getCatalog().getDatabaseFile(tableId);
         List<Page> q = hf.insertTuple(tid, t);
         for (Page p : q)
@@ -279,6 +282,7 @@ public class BufferPool {
             ((HeapPage)p).markDirty(true, tid);
             cachePage(page, ((HeapPage)p).getId());
         }
+        System.out.println("passed insert");
     }
 
     /**
@@ -307,6 +311,7 @@ public class BufferPool {
 
             cachePage(page, ((HeapPage)p).getId());
         }
+        System.out.println("passed delete");
     }
 
     /**

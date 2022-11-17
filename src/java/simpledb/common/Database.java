@@ -27,6 +27,7 @@ public class Database {
 
     private Database() {
         _catalog = new Catalog();
+        System.out.println("Made bufferpool");
         _bufferpool = new BufferPool(BufferPool.DEFAULT_PAGES);
         LogFile tmp = null;
         try {
@@ -79,6 +80,7 @@ public class Database {
 
     // reset the database, used for unit tests only.
     public static void reset() {
+        System.out.println("Dadatabase ");
         _instance.set(new Database());
     }
 

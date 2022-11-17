@@ -82,7 +82,7 @@ public class Delete extends Operator {
             try{
             Database.getBufferPool().deleteTuple(t, tup);
             }
-            catch (Exception e)
+            catch (IOException e)
             {
                 tot--;
 

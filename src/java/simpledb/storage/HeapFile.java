@@ -131,14 +131,15 @@ public class HeapFile implements DbFile {
         for (int i =0 ; i < numPages(); ++i)
         {
 
-            HeapPage p = (HeapPage) Database.getBufferPool().getPage(tid,new HeapPageId(getId(), i), Permissions.READ_WRITE);	
             try{
+                HeapPage p = (HeapPage) Database.getBufferPool().getPage(tid,new HeapPageId(getId(), i), Permissions.READ_WRITE);	
                 p.insertTuple(t);
                 return Arrays.asList(p);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-
+                System.out.println("couldn't acquire page because of " + e);
+                throw e;
             }
         }
         int numPages = numPages();

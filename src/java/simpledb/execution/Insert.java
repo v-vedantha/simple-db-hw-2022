@@ -1,5 +1,7 @@
 package simpledb.execution;
 
+import java.io.IOException;
+
 import simpledb.common.Database;
 import simpledb.common.DbException;
 import simpledb.storage.BufferPool;
@@ -90,8 +92,9 @@ public class Insert extends Operator {
             try{
             Database.getBufferPool().insertTuple(t, tableId, tup);
             }
-            catch (Exception e)
+            catch (IOException e)
             {
+                
 
             }
         }

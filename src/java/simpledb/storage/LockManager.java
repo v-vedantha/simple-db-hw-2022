@@ -1,5 +1,7 @@
 package simpledb.storage;
 import java.util.*;
+
+import simpledb.common.Database;
 import simpledb.transaction.*;
 import java.util.concurrent.*;
 
@@ -8,9 +10,14 @@ import java.util.concurrent.*;
 public class LockManager {
     
     public Map<PageId, Queue<Lock>> lockTable;
+    private int randomForDebugging;
 
     public LockManager() {
+        // System.out.println("made a lock manager");
         lockTable = new ConcurrentHashMap<>();
+        // set randome to something random
+        Random rand = new Random();
+        randomForDebugging = rand.nextInt(100);
     }
 
     public synchronized boolean detectDeadlock(TransactionId tid, PageId pid, Lock.LockType type, Set<TransactionId> visited) {
@@ -45,7 +52,12 @@ public class LockManager {
                 {
                     if (detectDeadlock(tid, pid, Lock.LockType.SHARED, new HashSet<TransactionId>()))
                     {
+                        // System.out.println("Decided not to give a shared lock");
+                        Database.getBufferPool().transactionComplete(tid, false);
                         throw new TransactionAbortedException();
+                    }
+                    else{
+                        return false;
                     }
                 }
             }
@@ -56,6 +68,7 @@ public class LockManager {
             locks.add(new Lock(Lock.LockType.SHARED, tid, pid));
             lockTable.put(pid, locks);
         }
+        // System.out.println("Granted shared lock to " + tid.getId() + " on " + pid.getPageNumber());
         return true;
     }
 
@@ -71,7 +84,13 @@ public class LockManager {
                 {
                     if (detectDeadlock(tid, pid, Lock.LockType.EXCLUSIVE, new HashSet<TransactionId>()))
                     {
+                        // System.out.println("Decided not to give a exclusive lock");
+                        // abortion time
+                        Database.getBufferPool().transactionComplete(tid, false);
                         throw new TransactionAbortedException();
+                    }
+                    else{
+                        return false;
                     }
                 }
             }
@@ -82,6 +101,7 @@ public class LockManager {
             locks.add(new Lock(Lock.LockType.EXCLUSIVE, tid, pid));
             lockTable.put(pid, locks);
         }
+        // System.out.println("Granted exc lock to " + tid.getId() + " on " + pid.getPageNumber());
         return true;
     }
 
