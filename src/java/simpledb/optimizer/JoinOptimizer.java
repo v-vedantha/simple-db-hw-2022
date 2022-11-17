@@ -105,7 +105,7 @@ public class JoinOptimizer {
             // HINT: You may need to use the variable "j" if you implemented
             // a join algorithm that's more complicated than a basic
             // nested-loops join.
-            return cost1 + card1*cost2 + card2*cost1;
+            return cost1 + card1*cost2 + card2*card1;
         }
     }
 
@@ -219,9 +219,11 @@ public class JoinOptimizer {
 
         PlanCache cache = new PlanCache();
         HashSet<LogicalJoinNode> j = new HashSet<LogicalJoinNode>(joins);
+        System.out.println(joins.size());
 
-        for (int i = 0; i <= j.size(); ++i)
+        for (int i = 0; i <= joins.size(); ++i)
         {
+            // System.out.println("ballsack");
             for (Set<LogicalJoinNode> s : enumerateSubsets(joins, i))
             {
                 CostCard bestPlan = new CostCard();
@@ -231,7 +233,6 @@ public class JoinOptimizer {
                     CostCard plan = computeCostAndCardOfSubplan(stats, filterSelectivities,s_,s,bestPlan.cost,cache);
                     if (plan == null)
                     {
-
                         continue;
                     }
                     bestPlan = plan;
@@ -240,16 +241,11 @@ public class JoinOptimizer {
             }
         }
         List<LogicalJoinNode> l = cache.getOrder(j);
-        //Collections.reverse(l);
-        if (false){
 
-            for (LogicalJoinNode j_ : l)
-            {
-                System.out.println(j_.toString());
-                System.out.println(j_.t2Alias);
-                System.out.println(j_.t1Alias);
-            }
-        }
+        //print the results
+        // Collections.reverse(l);
+        // printJoins(l, cache, stats, filterSelectivities);
+        // System.out.println("FINISHED");
         return l;
     }
 

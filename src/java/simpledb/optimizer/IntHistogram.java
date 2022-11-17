@@ -56,8 +56,17 @@ public class IntHistogram {
         if (v == max) {
             return buckets - 1;
         }
-        double width = (max - min) / buckets;
+        double width = 1.0 * (max - min) / buckets;
         int index =  (int) ((v - min)  / width);
+        if (index == buckets)
+        {
+            System.out.println("Index is " + index);
+            System.out.println("Max is " + max);
+            System.out.println("Min is " + min);
+            System.out.println("Width is " + width);
+            System.out.println("Value is " + v);
+            System.out.println("Fuck me in the fuckc");
+        }
         return index;
     }
     public void addValue(int v) {
@@ -83,7 +92,7 @@ public class IntHistogram {
             return 0.0;
         }
         int bucketIndex = getBucketIndex(v);
-        double width = (max - min) / (double) buckets;
+        double width = 1.0*(max - min) / (double) buckets;
         double op =  (bucketCounts[bucketIndex] / width)/total;
         return op;
     }
@@ -98,12 +107,15 @@ public class IntHistogram {
             return 1.0;
         }
         int bucketIndex = getBucketIndex(v);
-        double fraction = (v - min) / (double) (max - min) * buckets - bucketIndex;
+        double width = 1.0*(max - min) / (double) buckets;
+        double bucket_start = min + bucketIndex * width;
+        double bucket_end = bucket_start + width;
+        double frac_less_than = (v - bucket_start) / width;
         double lessThan = 0.0;
         for (int i = 0; i < bucketIndex; i++) {
             lessThan += bucketCounts[i];
         }
-        lessThan += fraction * bucketCounts[bucketIndex];
+        lessThan += frac_less_than * bucketCounts[bucketIndex];
         return lessThan / total;
     }
 
@@ -117,12 +129,16 @@ public class IntHistogram {
             return 1.0;
         }
         int bucketIndex = getBucketIndex(v);
-        double fraction = (v - min) / (double) (max - min) * buckets - bucketIndex;
+        double width = 1.0*(max - min) / (double) buckets;
+        double bucket_start = min + bucketIndex * width;
+        double bucket_end = bucket_start + width;
+        double frac_less_than = (v - bucket_start) / width;
         double lessThan = 0.0;
         for (int i = 0; i < bucketIndex; i++) {
             lessThan += bucketCounts[i];
         }
-        lessThan += (fraction + 1) * bucketCounts[bucketIndex];
+        lessThan += (frac_less_than) * bucketCounts[bucketIndex];
+        lessThan += estimateEqual(v) * total;
         return lessThan / total;
     }
 
@@ -136,12 +152,15 @@ public class IntHistogram {
             return 0.0;
         }
         int bucketIndex = getBucketIndex(v);
-        double fraction = (v - min) / (double) (max - min) * buckets - bucketIndex;
+        double width = 1.0*(max - min) / (double) buckets;
+        double bucket_start = min + bucketIndex * width;
+        double bucket_end = bucket_start + width;
+        double frac_greater_than = (bucket_end - v) / width;
         double greaterThan = 0.0;
         for (int i = bucketIndex + 1; i < buckets; i++) {
             greaterThan += bucketCounts[i];
         }
-        greaterThan += (1 - fraction) * bucketCounts[bucketIndex];
+        greaterThan += (frac_greater_than) * bucketCounts[bucketIndex];
         return greaterThan / total;
     }
 
@@ -155,23 +174,22 @@ public class IntHistogram {
             return 0.0;
         }
         int bucketIndex = getBucketIndex(v);
-        double fraction = (v - min) / (double) (max - min) * buckets - bucketIndex;
+        double width = 1.0*(max - min) / (double) buckets;
+        double bucket_start = min + bucketIndex * width;
+        double bucket_end = bucket_start + width;
+        double frac_greater_than = (bucket_end - v) / width;
         double greaterThan = 0.0;
         for (int i = bucketIndex + 1; i < buckets; i++) {
             greaterThan += bucketCounts[i];
         }
-        greaterThan += (1 - fraction + 1) * bucketCounts[bucketIndex];
+        greaterThan += estimateEqual(v) * total;
+        greaterThan += (frac_greater_than) * bucketCounts[bucketIndex];
         return greaterThan / total;
     }
 
     public double estimateNotEquals(int v)
     {
-        // some code goes here
-        if (v < min || v > max) {
-            return 1.0;
-        }
-        int bucketIndex = getBucketIndex(v);
-        return 1.0-((bucketCounts[bucketIndex] / ((double) (max - min) / buckets))/total);
+        return 1.0-estimateEqual(v);
     }
     public double estimateSelectivity(Predicate.Op op, int v) {
         // some code goes here
