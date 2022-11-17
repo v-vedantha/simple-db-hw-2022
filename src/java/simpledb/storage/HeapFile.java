@@ -136,10 +136,14 @@ public class HeapFile implements DbFile {
                 p.insertTuple(t);
                 return Arrays.asList(p);
             }
-            catch (Exception e)
+            catch (TransactionAbortedException e)
             {
                 System.out.println("couldn't acquire page because of " + e);
                 throw e;
+            }
+            catch(DbException e)
+            {
+                
             }
         }
         int numPages = numPages();

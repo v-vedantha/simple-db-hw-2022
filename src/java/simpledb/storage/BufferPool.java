@@ -132,6 +132,7 @@ public class BufferPool {
             }
             pages[i] = page;
             occupied[i] =true;
+            System.out.println("Returned a page here");
             return page;
 
 	    }
@@ -280,6 +281,7 @@ public class BufferPool {
         {
             HeapPage page = ((HeapPage)p);
             ((HeapPage)p).markDirty(true, tid);
+            System.out.println("inserting page " + page.getId());
             cachePage(page, ((HeapPage)p).getId());
         }
         System.out.println("passed insert");
@@ -413,6 +415,7 @@ public class BufferPool {
             try{
                 flushPage(page.getId());
                 removePage(page.getId());
+                System.out.println("efived");
                 return;
             }
             catch (Exception e)

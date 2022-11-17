@@ -56,7 +56,7 @@ public class HeapFileIt extends AbstractDbFileIterator {
 		    open = false;
 		}
 
-		public Tuple readNext()
+		public Tuple readNext() throws DbException, TransactionAbortedException
 		{
 			if (!open) return null;
 			if (it == null || it.hasNext() == false)
@@ -65,11 +65,7 @@ public class HeapFileIt extends AbstractDbFileIterator {
 				{
 					i++;
 					HeapPageId id = new HeapPageId(tableid, i);
-					try{
-						it = ( (HeapPage)Database.getBufferPool().getPage(tid, id, Permissions.READ_ONLY)).iterator();
-					} 
-					catch (Exception e) {
-					}
+					it = ( (HeapPage)Database.getBufferPool().getPage(tid, id, Permissions.READ_ONLY)).iterator();
 					if (it == null){
 						 continue;
 					}

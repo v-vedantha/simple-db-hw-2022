@@ -22,6 +22,7 @@ public class LockManager {
 
     public synchronized boolean detectDeadlock(TransactionId tid, PageId pid, Lock.LockType type, Set<TransactionId> visited) {
         if (visited.contains(tid)) {
+                        System.out.println("ohhhh baby we have a deadlock");
             return true;
         }
         visited.add(tid);
@@ -32,6 +33,7 @@ public class LockManager {
                 }
                 if (lock.getType() == Lock.LockType.EXCLUSIVE) {
                     if (detectDeadlock(lock.getTid(), pid, Lock.LockType.EXCLUSIVE, visited)) {
+                        System.out.println("ohhhh baby we have a deadlock");
                         return true;
                     }
                 }
