@@ -2,6 +2,7 @@ package simpledb.index;
 
 import simpledb.common.*;
 import simpledb.execution.Predicate;
+import simpledb.execution.Predicate.Op;
 import simpledb.storage.*;
 
 import java.io.*;
@@ -34,7 +35,6 @@ public class BTreeLeafPage extends BTreePage {
             prev = t.getField(fieldid);
             assert (t.getRecordId().getPageId().equals(this.getId()));
         }
-
         assert null == upperBound || null == prev || (prev.compare(Predicate.Op.LESS_THAN_OR_EQ, upperBound));
 
         assert !checkoccupancy || depth <= 0 || (getNumTuples() >= getMaxTuples() / 2);

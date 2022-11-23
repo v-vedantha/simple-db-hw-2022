@@ -132,7 +132,7 @@ public class BufferPool {
             }
             pages[i] = page;
             occupied[i] =true;
-            System.out.println("Returned a page here");
+            // System.out.println("Returned a page here");
             return page;
 
 	    }
@@ -275,16 +275,14 @@ public class BufferPool {
             throws DbException, IOException, TransactionAbortedException {
         // TODO: some code goes here
         // not necessary for lab1
-        HeapFile hf = (HeapFile) Database.getCatalog().getDatabaseFile(tableId);
+        DbFile hf = (DbFile) Database.getCatalog().getDatabaseFile(tableId);
         List<Page> q = hf.insertTuple(tid, t);
         for (Page p : q)
         {
-            HeapPage page = ((HeapPage)p);
-            ((HeapPage)p).markDirty(true, tid);
-            System.out.println("inserting page " + page.getId());
-            cachePage(page, ((HeapPage)p).getId());
+            Page page = ((Page)p);
+            ((Page)p).markDirty(true, tid);
+            cachePage(page, ((Page)p).getId());
         }
-        System.out.println("passed insert");
     }
 
     /**
@@ -304,14 +302,14 @@ public class BufferPool {
             throws DbException, IOException, TransactionAbortedException {
         // TODO: some code goes here
         // not necessary for lab1
-        HeapFile hf = (HeapFile) Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
+        DbFile hf = (DbFile) Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
         List<Page> q = hf.deleteTuple(tid, t);
         for (Page p : q)
         {
-            HeapPage page = ((HeapPage)p);
-            ((HeapPage)p).markDirty(true, tid);
+            Page page = ((Page)p);
+            ((Page)p).markDirty(true, tid);
 
-            cachePage(page, ((HeapPage)p).getId());
+            cachePage(page, ((Page)p).getId());
         }
         System.out.println("passed delete");
     }
@@ -415,7 +413,6 @@ public class BufferPool {
             try{
                 flushPage(page.getId());
                 removePage(page.getId());
-                System.out.println("efived");
                 return;
             }
             catch (Exception e)

@@ -9,6 +9,7 @@ import simpledb.execution.Predicate.Op;
 import simpledb.storage.*;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
+import simpledb.index.BTreeChecker;
 
 import java.io.*;
 import java.util.*;
@@ -185,8 +186,34 @@ public class BTreeFile implements DbFile {
     private BTreeLeafPage findLeafPage(TransactionId tid, Map<PageId, Page> dirtypages, BTreePageId pid, Permissions perm,
                                        Field f)
             throws DbException, TransactionAbortedException {
-        // TODO: some code goes here
-        return null;
+        // Check if the pid corresponds to a leaf
+        if (pid.pgcateg() == BTreePageId.LEAF) {
+            // If so, lock the leaf page with the given permissions and return it
+            return (BTreeLeafPage) Database.getBufferPool().getPage(tid, pid, perm);
+        }
+        BTreePage page = (BTreePage) getPage(tid, dirtypages, pid, Permissions.READ_ONLY);
+
+        // If the page is an internal page, find the appropriate child page
+        BTreeInternalPage internalPage = (BTreeInternalPage) page;
+        // Use the iterator to iterate through the children pages
+        Iterator<BTreeEntry> it = internalPage.iterator();
+        BTreeEntry entry = null;
+
+        while(it.hasNext()) {
+            entry = it.next();
+            // If the field is null, return the left-most child page
+            if (f == null) {
+                return findLeafPage(tid, dirtypages, entry.getLeftChild(), perm, f);
+            }
+            // If the field is less than the current entry, return the left child page
+            if (f.compare(Op.LESS_THAN_OR_EQ, entry.getKey())) {
+                return findLeafPage(tid, dirtypages, entry.getLeftChild(), perm, f);
+            }
+        }
+
+        // if you find nothing, return from the right most page
+        return findLeafPage(tid, dirtypages, entry.getRightChild(), perm, f);
+
     }
 
     /**
@@ -235,8 +262,54 @@ public class BTreeFile implements DbFile {
         // the new entry.  getParentWithEmtpySlots() will be useful here.  Don't forget to update
         // the sibling pointers of all the affected leaf pages.  Return the page into which a
         // tuple with the given key field should be inserted.
-        return null;
 
+        // Get the parent page
+        BTreeInternalPage parent = getParentWithEmptySlots(tid, dirtypages, page.getParentId(), field);
+        // Create a new leaf page
+        BTreeLeafPage newLeafPage = (BTreeLeafPage) getEmptyPage(tid, dirtypages, BTreePageId.LEAF);
+        // Get the tuples from the old leaf page
+        Iterator<Tuple> it = page.reverseIterator();
+        // get the number of tuples
+        int numTuples = page.getNumTuples();
+
+        // Move the second half of tuples to the new page
+        for (int i = 0; i < numTuples / 2; i++) {
+            Tuple tuple = it.next();
+            page.deleteTuple(tuple);
+            newLeafPage.insertTuple(tuple);
+        }
+
+        Tuple middleTuple = it.next();
+        Field middleKey = middleTuple.getField(keyField);
+
+        BTreeEntry entry = new BTreeEntry(middleKey, page.getId(), newLeafPage.getId());
+        parent.insertEntry(entry);
+
+        // Edit the siblings
+        // Set the following page's left id to newLeafPage
+        if (page.getRightSiblingId() != null) {
+            BTreeLeafPage followingPage = (BTreeLeafPage) getPage(tid, dirtypages, page.getRightSiblingId(), Permissions.READ_WRITE);
+            followingPage.setLeftSiblingId(newLeafPage.getId());
+        }
+        newLeafPage.setRightSiblingId(page.getRightSiblingId());
+        newLeafPage.setLeftSiblingId(page.getId());
+        page.setRightSiblingId(newLeafPage.getId());
+
+        newLeafPage.setParentId(parent.getId());
+        page.setParentId(parent.getId());
+
+        updateParentPointers(tid, dirtypages, parent);
+        dirtypages.put(page.getId(), page);
+        dirtypages.put(newLeafPage.getId(), newLeafPage);
+        dirtypages.put(parent.getId(), parent);
+        BTreeChecker.checkRep(this, tid, dirtypages, false);
+
+        // Return the page into which a tuple with the given key field should be inserted
+        if (field.compare(Op.LESS_THAN_OR_EQ, middleKey)) {
+            return page;
+        } else {
+            return newLeafPage;
+        }
     }
 
     /**
@@ -272,7 +345,53 @@ public class BTreeFile implements DbFile {
         // the parent pointers of all the children moving to the new page.  updateParentPointers()
         // will be useful here.  Return the page into which an entry with the given key field
         // should be inserted.
-        return null;
+
+        // Get the parent page
+        BTreeInternalPage parent = getParentWithEmptySlots(tid, dirtypages, page.getParentId(), field);
+        // Create a new internal page
+        System.out.println("Splitted");
+        BTreeInternalPage newInternalPage = (BTreeInternalPage) getEmptyPage(tid, dirtypages, BTreePageId.INTERNAL);
+        // Get the entries from the old internal page
+        Iterator<BTreeEntry> it = page.reverseIterator();
+        // get the number of entries
+        int numEntries = page.getNumEntries();
+        // Move the second half of the tuples to the new page
+        for (int i = 0; i < numEntries / 2; i++) {
+            BTreeEntry entry = it.next();
+            // get new record id
+            page.deleteKeyAndRightChild(entry);
+            newInternalPage.insertEntry(entry);
+        }
+        // Copy the middle key up into the parent page
+        BTreeEntry middleEntry = it.next();
+        Field middleKey = middleEntry.getKey();
+        page.deleteKeyAndRightChild(middleEntry);
+        newInternalPage.setParentId(parent.getId());
+        page.setParentId(parent.getId());
+
+
+
+        // Update the parent pointers of all the children moving to the new page
+
+        BTreeEntry entry = new BTreeEntry(middleKey, page.getId(), newInternalPage.getId());
+        parent.insertEntry(entry);
+        updateParentPointers(tid, dirtypages, parent);
+        updateParentPointers(tid, dirtypages, newInternalPage);
+        System.out.println("Parent id: " + parent.getId());
+        // Add the pages to dirtypages
+        dirtypages.put(page.getId(), page);
+        dirtypages.put(newInternalPage.getId(), newInternalPage);
+        dirtypages.put(parent.getId(), parent);
+        BTreeChecker.checkRep(this, tid, dirtypages, false);
+
+
+        // Return the page into which an entry with the given key field should be inserted
+        if (field.compare(Op.LESS_THAN_OR_EQ, middleKey)) {
+            return page;
+        } else {
+            return newInternalPage;
+        }
+
     }
 
     /**
@@ -318,6 +437,7 @@ public class BTreeFile implements DbFile {
 
         // split the parent if needed
         if (parent.getNumEmptySlots() == 0) {
+            System.out.println("No empty slots");
             parent = splitInternalPage(tid, dirtypages, parent, field);
         }
 
